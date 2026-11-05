@@ -9,47 +9,28 @@ export interface LineProfile {
 }
 
 interface LiffContextType {
-  profile: LineProfile;
-  isMockMode: boolean;
+  profile: LineProfile | null;
   isReady: boolean;
-  switchMockUser: (preset: "TEACHER" | "STAFF" | "STUDENT") => void;
+  error: string | null;
 }
 
-const MOCK_PROFILES: Record<"TEACHER" | "STAFF" | "STUDENT", LineProfile> = {
-  TEACHER: {
-    userId: "Ud8b401a819d9ab0c1cd6e63cc48de124",
-    displayName: "ครูแอดมิน (คุณ)",
-    pictureUrl:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-  },
-  STAFF: {
-    userId: "Ud8b401a819d9ab0c1cd6e63cc48de124",
-    displayName: "ครูวิภา ธุรการ",
-  },
-  STUDENT: {
-    userId: "Ud8b401a819d9ab0c1cd6e63cc48de124",
-    displayName: "ด.ช.ปิติ รักเรียน (ม.4/1)",
-  },
-};
-
 const LiffContext = createContext<LiffContextType>({
-  profile: MOCK_PROFILES.TEACHER,
-  isMockMode: true,
+  profile: null,
   isReady: false,
-  switchMockUser: () => {},
+  error: null,
 });
 
 export function LiffProvider({ children }: { children: React.ReactNode }) {
-  const [profile, setProfile] = useState<LineProfile>(MOCK_PROFILES.TEACHER);
-  const [isMockMode, setIsMockMode] = useState<boolean>(true);
+  const [profile, setProfile] = useState<LineProfile | null>(null);
   const [isReady, setIsReady] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
 
     async function initLiff() {
       if (!liffId) {
-        setIsMockMode(true);
+        setError("ไม่พบการตั้งค่า NEXT_PUBLIC_LIFF_ID");
         setIsReady(true);
         return;
       }
@@ -65,17 +46,14 @@ export function LiffProvider({ children }: { children: React.ReactNode }) {
             displayName: userProfile.displayName,
             pictureUrl: userProfile.pictureUrl,
           });
-          setIsMockMode(false);
-        } else if (liff.isInClient()) {
+        } else {
+          // หากเปิดผ่าน Browser หรือยังไม่ได้ล็อกอิน ให้เด้งหน้า LINE Login อัตโนมัติ
           liff.login();
           return;
-        } else {
-          // Opened in external browser without login -> fallback to mock mode for convenience
-          setIsMockMode(true);
         }
-      } catch (err) {
-        console.warn("LIFF init fallback to Mock Mode:", err);
-        setIsMockMode(true);
+      } catch (err: unknown) {
+        console.error("LIFF initialization error:", err);
+        setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการเชื่อมต่อ LINE");
       } finally {
         setIsReady(true);
       }
@@ -84,14 +62,8 @@ export function LiffProvider({ children }: { children: React.ReactNode }) {
     initLiff();
   }, []);
 
-  const switchMockUser = (preset: "TEACHER" | "STAFF" | "STUDENT") => {
-    setProfile(MOCK_PROFILES[preset]);
-  };
-
   return (
-    <LiffContext.Provider
-      value={{ profile, isMockMode, isReady, switchMockUser }}
-    >
+    <LiffContext.Provider value={{ profile, isReady, error }}>
       {children}
     </LiffContext.Provider>
   );
@@ -100,4 +72,5 @@ export function LiffProvider({ children }: { children: React.ReactNode }) {
 export function useLiff() {
   return useContext(LiffContext);
 }
+
 

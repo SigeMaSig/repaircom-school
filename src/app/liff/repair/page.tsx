@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 export default function LiffRepairPage() {
-  const { profile, isMockMode, isReady, switchMockUser } = useLiff();
+  const { profile, isReady, error: liffError } = useLiff();
 
   const [reporterName, setReporterName] = useState("");
   const [reporterRole, setReporterRole] = useState("TEACHER");
@@ -48,10 +48,10 @@ export default function LiffRepairPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (isReady && profile.displayName && !reporterName) {
+    if (isReady && profile?.displayName && !reporterName) {
       setReporterName(profile.displayName);
     }
-  }, [isReady, profile.displayName, reporterName]);
+  }, [isReady, profile?.displayName, reporterName]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,9 +92,9 @@ export default function LiffRepairPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lineUserId: profile.userId,
-          lineDisplayName: profile.displayName,
-          linePictureUrl: profile.pictureUrl,
+          lineUserId: profile?.userId || "UNKNOWN_USER",
+          lineDisplayName: profile?.displayName || reporterName,
+          linePictureUrl: profile?.pictureUrl || null,
           reporterName,
           reporterRole,
           phone,
@@ -138,6 +138,15 @@ export default function LiffRepairPage() {
     setUrgency("NORMAL");
   };
 
+  if (!isReady) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
+        <Loader2 className="w-8 h-8 text-line animate-spin mb-2" />
+        <p className="text-sm text-slate-600">กำลังเชื่อมต่อ LINE Account...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 pb-12">
       {/* Top LIFF Header */}
@@ -176,94 +185,47 @@ export default function LiffRepairPage() {
       </div>
 
       <div className="max-w-lg mx-auto px-4 pt-4 space-y-4">
-        {/* LINE Profile Card & Mock Switcher */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center overflow-hidden border border-emerald-200">
-                {profile.pictureUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={profile.pictureUrl}
-                    alt={profile.displayName}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  profile.displayName.charAt(0)
-                )}
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-sm text-slate-800">
-                    {profile.displayName}
-                  </span>
-                  <span className="px-2 py-0.5 text-[10px] rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
-                    LINE Connected
-                  </span>
+        {/* LINE Profile Card */}
+        {profile && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center overflow-hidden border border-emerald-200">
+                  {profile.pictureUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile.pictureUrl}
+                      alt={profile.displayName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    profile.displayName.charAt(0)
+                  )}
                 </div>
-                <p className="text-xs text-slate-500 font-mono">
-                  ID: {profile.userId}
-                </p>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-sm text-slate-800">
+                      {profile.displayName}
+                    </span>
+                    <span className="px-2 py-0.5 text-[10px] rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+                      LINE Account
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-mono">
+                    ID: {profile.userId}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          {isMockMode && (
-            <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span className="text-slate-500 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                โหมดจำลอง LIFF (สลับบัญชีทดสอบ):
-              </span>
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    switchMockUser("TEACHER");
-                    setReporterName("อาจารย์สมชาย ใจดี");
-                    setReporterRole("TEACHER");
-                  }}
-                  className={`px-2 py-1 rounded border text-xs transition ${
-                    profile.userId === "U_MOCK_USER_001"
-                      ? "bg-slate-800 text-white border-slate-800"
-                      : "bg-slate-50 text-slate-600 border-slate-200"
-                  }`}
-                >
-                  ครูสมชาย
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    switchMockUser("STAFF");
-                    setReporterName("คุณวิภา รักงาน (ธุรการ)");
-                    setReporterRole("STAFF");
-                  }}
-                  className={`px-2 py-1 rounded border text-xs transition ${
-                    profile.userId === "U_MOCK_USER_002"
-                      ? "bg-slate-800 text-white border-slate-800"
-                      : "bg-slate-50 text-slate-600 border-slate-200"
-                  }`}
-                >
-                  เจ้าหน้าที่วิภา
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    switchMockUser("STUDENT");
-                    setReporterName("ด.ช.ปิติ รักเรียน (ม.4/1)");
-                    setReporterRole("STUDENT");
-                  }}
-                  className={`px-2 py-1 rounded border text-xs transition ${
-                    profile.userId === "U_MOCK_USER_003"
-                      ? "bg-slate-800 text-white border-slate-800"
-                      : "bg-slate-50 text-slate-600 border-slate-200"
-                  }`}
-                >
-                  นักเรียน
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        {liffError && (
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>คำเตือน: {liffError}</span>
+          </div>
+        )}
 
         {/* Success Screen */}
         {submittedTicket ? (
