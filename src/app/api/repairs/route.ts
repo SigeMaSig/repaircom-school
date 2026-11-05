@@ -72,20 +72,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate ticketCode e.g. REP-2026-004
+    // Generate unique ticketCode e.g. REP-2026-004
     const year = new Date().getFullYear();
     const count = await prisma.repairTicket.count();
     const nextNumber = String(count + 1).padStart(3, "0");
-    const randomSuffix = Math.floor(10 + Math.random() * 90);
-    const ticketCode = `REP-${year}-${nextNumber}${count > 0 ? "" : ""}`;
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const candidateCode = `REP-${year}-${nextNumber}`;
 
-    // Check uniqueness or fallback with random digits
+    // Ensure uniqueness
     const existing = await prisma.repairTicket.findUnique({
-      where: { ticketCode },
+      where: { ticketCode: candidateCode },
     });
     const finalTicketCode = existing
       ? `REP-${year}-${nextNumber}-${randomSuffix}`
-      : ticketCode;
+      : candidateCode;
 
     const ticket = await prisma.repairTicket.create({
       data: {
@@ -107,16 +107,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const lineResult = await sendRepairNotificationToUser(ticket, "CREATED");
+    let lineResult = { sent: false, reason: "" };
+    try {
+      lineResult = await sendRepairNotificationToUser(ticket, "CREATED");
+    } catch (lineErr) {
+      console.error("Non-blocking LINE notification error:", lineErr);
+    }
 
     return NextResponse.json({
       ticket,
       lineNotification: lineResult,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("POST /api/repairs error:", error);
     return NextResponse.json(
-      { error: "เกิดข้อผิดพลาดในการบันทึกใบแจ้งซ่อม" },
+      { error: error?.message || "เกิดข้อผิดพลาดในการบันทึกใบแจ้งซ่อม" },
       { status: 500 }
     );
   }
