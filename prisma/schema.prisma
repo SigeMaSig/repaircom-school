@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model RepairTicket {
+  id              String   @id @default(cuid())
+  ticketCode      String   @unique
+  lineUserId      String
+  lineDisplayName String
+  linePictureUrl  String?
+  reporterName    String
+  reporterRole    String   // TEACHER, STAFF, STUDENT
+  phone           String?
+  room            String   // เช่น ห้องคอมพิวเตอร์ 1, ห้องพักครู
+  assetCode       String?  // เช่น PC-01, ครุภัณฑ์ 7440-001
+  deviceType      String   // PC, NOTEBOOK, PROJECTOR, PRINTER, NETWORK, OTHER
+  urgency         String   @default("NORMAL") // NORMAL, URGENT, CRITICAL
+  problemTitle    String
+  problemDetail   String
+  imageUrl        String?
+  status          String   @default("PENDING") // PENDING, IN_PROGRESS, WAITING_PARTS, COMPLETED, CANCELLED
+  technicianName  String?
+  adminNote       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
