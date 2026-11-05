@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    let lineResult = { sent: false, reason: "" };
+    let lineResult: { sent: boolean; reason?: string } = { sent: false, reason: "" };
     try {
       lineResult = await sendRepairNotificationToUser(ticket, "CREATED");
     } catch (lineErr) {
